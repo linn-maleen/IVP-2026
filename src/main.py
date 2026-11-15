@@ -4,7 +4,7 @@ import cv2
 import os
 
 images_directory = '../train'
-resize_factor = 0.3
+resize_factor = 0.6
 
 # Load all images in folder
 for entry in os.scandir(images_directory):
