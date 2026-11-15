@@ -34,6 +34,7 @@ for entry in os.scandir(images_directory):
         center = (int(round(x)), int(round(y)))
         radius = int(round(radius))
 
+        # For now save image
         cv2.circle(img, center, radius, 255, thickness=4)
         cv2.imwrite(f"../output/{entry.name}", img)
 
