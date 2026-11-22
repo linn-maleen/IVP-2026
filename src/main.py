@@ -10,16 +10,13 @@ resize_factor = 0.6
 for entry in os.scandir(images_directory):
     if entry.is_file():
         # Load directly in B&W
-        img = cv2.imread(entry.path, 0)
+        img = cv2.imread(entry.path, cv2.IMREAD_GRAYSCALE)
 
         # Downscale image to reduce computation requirements
-        img = cv2.resize(
-            img,
-            None,
-            fx=resize_factor,
-            fy=resize_factor,
-            interpolation=cv2.INTER_LINEAR
-        )
+        height,width = img.shape
+        scale = 1280/width
+        if scale < 1:
+            img = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR)
 
         # Reduce noise to avoid false circle detection
         img = cv2.medianBlur(img, 5)
@@ -34,7 +31,7 @@ for entry in os.scandir(images_directory):
         center = (int(round(x)), int(round(y)))
         radius = int(round(radius))
 
-        # For now save image
+        # For now save image (make sure the output folder is created)
         cv2.circle(img, center, radius, 255, thickness=4)
         cv2.imwrite(f"../output/{entry.name}", img)
 
