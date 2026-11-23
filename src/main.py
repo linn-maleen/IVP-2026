@@ -2,10 +2,15 @@ import copy
 
 import cv2
 import os
+import csv
+import numpy as np
 
 images_directory = '../train'
 max_width = 960
 
+with open('../train.csv') as f:
+    truth = dict(csv.reader(f))
+predictions = {}
 # Load all images in folder
 for entry in os.scandir(images_directory):
     if entry.is_file():
@@ -43,12 +48,39 @@ for entry in os.scandir(images_directory):
         # cv2.circle(img, center, radius, 255, thickness=4)
         # cv2.imwrite(f"../output/{entry.name}", img)
 
-        # Polar warp
-        warped = cv2.warpPolar(img, dsize=(0,0), center=center, maxRadius=radius, flags=cv2.WARP_POLAR_LINEAR)
+        # Polar warp to 360 rows (1 row = 1 degree, clockwise from 3)
+        warped = cv2.warpPolar(img, dsize=(radius,360), center=center, maxRadius=radius, flags=cv2.WARP_POLAR_LINEAR)
 
         # Save warped image
         cv2.imwrite(f"../output/{entry.name}", warped)
 
-        # Detect hands ... (dilation, edge detect, Hough line detect, etc.)
+        # Crop to band region, apply binary threshold, invert if needed
+        _, binary = cv2.threshold(warped, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        inner = int(0.15 * radius)
+        outer = int(0.60 * radius)
+        if binary[:, inner:outer].mean() > 127:  # dark face: flip
+            binary = 255 - binary
+        band = binary[:, inner:outer]
 
-        print(f"{entry.name}: Processed")
+        # Compute profile (average brightness per degree)
+        profile = band.mean(axis=1) / 255
+
+        # Find brightest degrees (hands)
+        first = np.argmax(profile)
+        rows = np.arange(360)
+        distance = np.abs(rows - first)
+        distance = np.minimum(distance, 360 - distance)
+        profile_without_first = np.where(distance > 10, profile, 0) # everything within 5° of first peak is 0
+        second  = np.argmax(profile_without_first)
+
+        minute_deg = (second + 90) % 360
+        minutes = round(minute_deg / 6) % 60
+
+        hour_deg = (first + 90) % 360
+        hour_offshift = minutes / 60 # how far the hour handle is off based on the minutes
+        hours = round(hour_deg / 30 - hour_offshift - 1) % 12 + 1 # shifts down by 1, wraps into 0-11 and shifts back up
+
+        time = f"{hours:02d}:{minutes:02d}"
+        predictions[entry.name] = time
+
+        print(f"{entry.name}: predicted {time}, truth {truth[entry.name]}")
