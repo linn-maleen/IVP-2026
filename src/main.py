@@ -74,6 +74,11 @@ for entry in os.scandir(images_directory):
         profile_without_first = np.where(distance > 10, profile, 0) # everything within 5° of first peak is 0
         second  = np.argmax(profile_without_first)
 
+        # Minute hand is longer so more white beyond the band
+        if binary[first, outer:].mean() > binary[second, outer:].mean():
+            first, second = second, first
+
+
         minute_deg = (second + 90) % 360
         minutes = round(minute_deg / 6) % 60
 
