@@ -66,6 +66,9 @@ for entry in os.scandir(images_directory):
         # Compute profile (average brightness per degree)
         profile = band.mean(axis=1) / 255
 
+        # Convolute profile
+        profile = np.convolve(np.tile(profile, 3), np.ones(7) / 7, mode='same')[360:720]
+
         # Find brightest degrees (hands)
         first = np.argmax(profile)
         rows = np.arange(360)
