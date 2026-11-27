@@ -1,18 +1,20 @@
 import copy
-
 import cv2
 import os
 import csv
 import numpy as np
 
-images_directory = '../train'
 max_width = 960
 submission_filename = "../submission.csv"
+TRAIN = False # True = training dataset, False = test dataset
 
-with open('../train.csv') as f:
-    truth = dict(csv.reader(f))
-del truth['ID'] # drop the header row
+if TRAIN:
+    images_directory = '../train'
+else:
+    images_directory = '../test'
+
 predictions = {}
+
 # Load all images in folder
 for entry in os.scandir(images_directory):
     if entry.is_file():
@@ -95,19 +97,24 @@ for entry in os.scandir(images_directory):
         time = f"{hours:02d}:{minutes:02d}"
         predictions[entry.name] = time
 
-        print(f"{entry.name}: predicted {time}, truth {truth[entry.name]}")
+        print(f"{entry.name}: predicted {time}")
 
-total = 0
-for name, predicted in predictions.items():
-    t = int(truth[name][:2]) * 60 + int(truth[name][3:])
-    p = int(predicted[:2]) * 60 + int(predicted[3:])
-    diff = abs(t - p) % 720
-    diff = min(diff, 720 - diff)
-    total += 1 if diff <= 2 else 0.8 if diff <= 10 else 0.5 if diff <= 30 else 0
+if TRAIN:
+    with open('../train.csv') as f:
+        truth = dict(csv.reader(f))
+    del truth['ID'] # drop the header row
 
-with open(submission_filename, 'w', newline='') as csvfile:
-    writer = csv.writer(csvfile)
-    writer.writerow(["ID", "time"])
-    writer.writerows(predictions.items())
+    total = 0
+    for name, predicted in predictions.items():
+        t = int(truth[name][:2]) * 60 + int(truth[name][3:])
+        p = int(predicted[:2]) * 60 + int(predicted[3:])
+        diff = abs(t - p) % 720
+        diff = min(diff, 720 - diff)
+        total += 1 if diff <= 2 else 0.8 if diff <= 10 else 0.5 if diff <= 30 else 0
 
-print("score:", total / len(truth))
+    print("\nscore:", total / len(truth))
+else:
+    with open(submission_filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["ID", "time"])
+        writer.writerows(predictions.items())
