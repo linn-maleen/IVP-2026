@@ -7,6 +7,7 @@ import numpy as np
 
 images_directory = '../train'
 max_width = 960
+submission_filename = "../submission.csv"
 
 with open('../train.csv') as f:
     truth = dict(csv.reader(f))
@@ -38,6 +39,8 @@ for entry in os.scandir(images_directory):
         )
 
         if circles is None:
+            # When we don't detect, we can at least try by luck
+            predictions[entry.name] = "12:00"
             print(f"{entry.name}: Error - No circle found")
             continue
 
@@ -101,5 +104,10 @@ for name, predicted in predictions.items():
     diff = abs(t - p) % 720
     diff = min(diff, 720 - diff)
     total += 1 if diff <= 2 else 0.8 if diff <= 10 else 0.5 if diff <= 30 else 0
+
+with open(submission_filename, 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(["ID", "time"])
+    writer.writerows(predictions.items())
 
 print("score:", total / len(truth))
